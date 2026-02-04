@@ -1,3 +1,5 @@
+raw_data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -77,6 +79,9 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# VSCODE
+*.code-workspace
 
 # IPython
 profile_default/

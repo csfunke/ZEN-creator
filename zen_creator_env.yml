@@ -1,0 +1,12 @@
+name: zen-creator-env
+channels:
+  - conda-forge
+  - gurobi
+dependencies:
+  - pip
+  - python=3.13
+  - pip:
+      - -e .[dev,docs]
+
+# conda env create -f zen_creator_env.yml
+# conda remove --name zen-creator-env --all
