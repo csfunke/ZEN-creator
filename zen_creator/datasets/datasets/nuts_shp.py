@@ -9,28 +9,34 @@ from zen_creator.elements.element import Element
 from zen_creator.utils.attribute import Attribute
 
 
-class NUTSshp(Dataset):
+class NUTSshp(Dataset[pd.DataFrame]):
     name = "nuts_shp"
 
     def __init__(self, source_path: Path | str):
         super().__init__(source_path=source_path)
 
-    def _get_author(self) -> str:
-        return "Eurostat"
-
-    def _get_publication_year(self) -> int:
-        return 2026
-
-    def _get_title(self) -> str:
+    def _set_title(self) -> str:
         return "Territorial units for statistics (NUTS)"
 
-    def _get_url(self) -> str:
+    def _set_author(self) -> str:
+        return "Eurostat"
+
+    def _set_publication(self) -> str:
+        return "Eurostat"
+
+    def _set_publication_year(self) -> int:
+        return 2026
+
+    def _set_title(self) -> str:
+        return "Territorial units for statistics (NUTS)"
+
+    def _set_url(self) -> str:
         return "https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics"
 
-    def _get_path(self) -> Path:
+    def _set_path(self) -> Path:
         return self.source_path / "01-energy_system" / "nodes_edges"
 
-    def _get_data(self) -> pd.DataFrame:
+    def _set_data(self) -> pd.DataFrame:
         gdf = gpd.read_file(self.path / "NUTS_RG_60M_2021_3035.shp")
         return gdf
 
@@ -47,7 +53,7 @@ class NUTSshp(Dataset):
                 listed as data.
         """
         # filter GeoDataFrame
-        nodes = element.model.config.main_settings.nodes
+        nodes = element.model.config.system.set_nodes
         regions = self.data[self.data["NUTS_ID"].isin(nodes)]
 
         # build connectivity matrix
@@ -88,7 +94,7 @@ class NUTSshp(Dataset):
 
         """
         # get nodes
-        nodes = np.array(element.model.config.main_settings.nodes)
+        nodes = np.array(element.model.config.system.set_nodes)
 
         # check that all nodes are NUTS regions
         if not np.all(np.isin(nodes, self.data["NUTS_ID"])):

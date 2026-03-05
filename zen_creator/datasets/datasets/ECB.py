@@ -11,7 +11,7 @@ import scipy.stats as stats
 from zen_creator.datasets.dataset import Dataset
 
 
-class ECB(Dataset):
+class ECB(Dataset[pd.DataFrame]):
     """Dataset class for ECB data."""
 
     name = "ecb"
@@ -29,12 +29,14 @@ class ECB(Dataset):
     def _get_url(self) -> str:
         return "https://data.ecb.europa.eu/"
 
-    def _get_path(self) -> Path:
+    def _get_path(self) -> Path | None:
         return None  # ECB data is accessed directly via URL, no local path needed
+
+    # ----- Property overwrites -----
 
     # ----- Load and format Data -----
 
-    def _get_data(self) -> float:
+    def _get_data(self) -> pd.DataFrame:
         """Method to get the inflation rate from ECB data."""
         url = "https://data-api.ecb.europa.eu/service/data/ICP/M.U2.N.000000.4.ANR?format=csvdata"
         df = pd.read_csv(url)

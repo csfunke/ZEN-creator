@@ -20,14 +20,11 @@ class ElectrodeBoiler(ConversionTechnology):
 
     def _set_lifetime(self) -> Attribute:
         attr = self._lifetime
-        return attr.set_data(default_value=25, source="assumption")
+        return attr
 
     def _set_conversion_factor(self) -> Attribute:
-        return Attribute(
-            name="conversion_factor",
-            default_value=[{"electricity": {"default_value": 1, "unit": "GWh/GWh"}}],
-            element=self,
-        )
+        attr = self._conversion_factor
+        return attr
 
     def _set_reference_carrier(self) -> Attribute:
         return Attribute(name="reference_carrier", default_value=["heat"], element=self)

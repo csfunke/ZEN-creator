@@ -261,8 +261,11 @@ class EnergySystem(Element):
     def _set_set_edges(self) -> Attribute:
         attr = Edges(source_path=self.source_path).get_set_edges(self)
 
+        # check that edges are not empty
+        if (set_edges := attr.df) is None or set_edges.empty:
+            raise ValueError("No edges are set in the energy system.")
+
         # manual connections NO-BE and NO-FR for gas, and SE-LT for electricity
-        set_edges = attr.df
         set_edges.loc["NO-FR", :] = ["NO", "FR"]
         set_edges.loc["FR-NO", :] = ["FR", "NO"]
         set_edges.loc["NO-BE", :] = ["NO", "BE"]

@@ -1,7 +1,7 @@
+import json
 import shutil
-from functools import cached_property
 from pathlib import Path
-from typing import Type
+from typing import Iterable, Type
 
 from zen_creator.elements import (
     Carrier,
@@ -14,25 +14,22 @@ from zen_creator.elements import (
 )
 from zen_creator.elements.element import Element
 from zen_creator.sectors import Sector
-from zen_creator.utils.default_config import Config
-from zen_creator.utils.system_file import SystemFile
+from zen_creator.utils.default_config import Config, load_config
 
 
 class Model:
-    def __init__(self, config: Config | None = None):
+    def __init__(self, config: Config | str | Path):
 
         # set attributes from input arguments
-        self.config: Config = config if config is not None else Config()
+        self.config: Config = (
+            config if isinstance(config, Config) else load_config(config)
+        )
         self.name: str = self.config.name
         self.output_folder: Path = Path(self.config.output_folder)
-        self.source_path: Path | None = (
-            Path(self.config.source_path)
-            if self.config.source_path is not None
-            else None
-        )
+        self.source_path: Path = Path(self.config.source_path)
 
         # initialize other attributes
-        self.energy_system: EnergySystem | None = EnergySystem(self)
+        self.energy_system: EnergySystem = EnergySystem(self)
         self.elements: dict[str, Element] = dict()
 
         for sector in self.config.sectors.include:
@@ -46,7 +43,7 @@ class Model:
 
     @classmethod
     def from_existing(
-        cls, existing_model_path: Path | str, config: Config | None = None
+        cls, existing_model_path: Path | str, config: Config | str | Path
     ):
         """
         Construct model from an existing model.
@@ -72,12 +69,8 @@ class Model:
         return model
 
     # -------- Properties ----------------------------------------------------------
-    @cached_property
-    def energy_system(self):
-        return EnergySystem(self)
-
     @property
-    def carriers(self):
+    def carriers(self) -> dict[str, Carrier]:
         """
         Returns dictionary of all carriers in the current model.
         """
@@ -88,7 +81,7 @@ class Model:
         }
 
     @property
-    def technologies(self):
+    def technologies(self) -> dict[str, Technology]:
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -96,7 +89,7 @@ class Model:
         }
 
     @property
-    def storage_technologies(self):
+    def storage_technologies(self) -> dict[str, StorageTechnology]:
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -104,7 +97,7 @@ class Model:
         }
 
     @property
-    def conversion_technologies(self):
+    def conversion_technologies(self) -> dict[str, ConversionTechnology]:
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -112,7 +105,7 @@ class Model:
         }
 
     @property
-    def transport_technologies(self):
+    def transport_technologies(self) -> dict[str, TransportTechnology]:
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -120,7 +113,7 @@ class Model:
         }
 
     @property
-    def retrofitting_technologies(self):
+    def retrofitting_technologies(self) -> dict[str, RetrofittingTechnology]:
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -128,7 +121,7 @@ class Model:
         }
 
     @property
-    def output_path(self):
+    def output_path(self) -> Path:
         """
         Output path where model will be saved.
         """
@@ -140,14 +133,14 @@ class Model:
         return output_path
 
     @property
-    def output_folder(self):
+    def output_folder(self) -> Path:
         """
         Output folder where model will be saved.
         """
         return self._out_path
 
     @output_folder.setter
-    def output_folder(self, value):
+    def output_folder(self, value: Path):
         """
         Validates output path.
         """
@@ -159,20 +152,17 @@ class Model:
         self._out_path = value
 
     @property
-    def source_path(self):
+    def source_path(self) -> Path:
         """
         Source path where model data is read from.
         """
         return self._source_path
 
     @source_path.setter
-    def source_path(self, value):
+    def source_path(self, value: Path):
         """
         Validates source path.
         """
-        if value is None:
-            self._source_path = value
-            return
         if not isinstance(value, Path):
             raise TypeError(
                 f"Expected an instance of 'Path' or `None`, got"
@@ -184,7 +174,7 @@ class Model:
 
     # -------- Adding / Removing Elements  -----------------------------------------
 
-    def add_element_by_name(self, element: str):
+    def add_element_by_name(self, element: str) -> None:
         """
         ToDo.
         """
@@ -194,7 +184,8 @@ class Model:
                 f"got '{type(element).__name__}' instead."
             )
 
-        element_cls = Element._element_registry.setdefault(element, None)
+        element_cls = Element._element_registry.get(element)
+
         if element_cls is None:
             raise ValueError(f"Element '{element}' is not registered.")
 
@@ -202,7 +193,7 @@ class Model:
 
         return
 
-    def add_element(self, element_cls: Type[Element]):
+    def add_element(self, element_cls: Type[Element]) -> None:
         """
         Adds an element to the model.
         """
@@ -226,7 +217,7 @@ class Model:
 
         return
 
-    def remove_element(self, element_cls: Type[Element]):
+    def remove_element(self, element_cls: Type[Element]) -> None:
         """
         Removes an element from the model.
         """
@@ -258,12 +249,12 @@ class Model:
         # remove element
         self.remove_element_by_name(name)
 
-    def remove_element_by_name(self, name: str):
+    def remove_element_by_name(self, name: str) -> None:
 
         print(f"Remove element {name}")
         del self.elements[name]
 
-    def add_sector_by_name(self, sector: str):
+    def add_sector_by_name(self, sector: str) -> None:
         """
         ToDo.
         """
@@ -273,7 +264,8 @@ class Model:
                 f"got '{type(sector).__name__}' instead."
             )
 
-        sector_cls = Sector._sector_registry.setdefault(sector, None)
+        sector_cls = Sector._sector_registry.get(sector)
+
         if sector_cls is None:
             raise ValueError(f"Sector '{sector}' is not registered.")
 
@@ -281,7 +273,7 @@ class Model:
 
         return
 
-    def add_sector(self, sector_cls: Type[Sector]):
+    def add_sector(self, sector_cls: Type[Sector]) -> None:
         """
         ToDo.
         """
@@ -298,7 +290,7 @@ class Model:
 
         return
 
-    def remove_sector(self, sector_cls: Type[Sector]):
+    def remove_sector(self, sector_cls: Type[Sector]) -> None:
         """
         Todo
         """
@@ -315,7 +307,7 @@ class Model:
 
     # ------- Building model ---------------------------------------------------
 
-    def build(self):
+    def build(self) -> None:
         """
         Builds the model by calling build() method of all elements.
         """
@@ -330,7 +322,7 @@ class Model:
 
     # -------- Write model -----------------------------------------------------
 
-    def write(self):
+    def write(self) -> None:
         # verify completeness
         self.validate()
 
@@ -343,7 +335,7 @@ class Model:
             shutil.rmtree(self.output_path)
 
         # write system.json
-        SystemFile(self).write()
+        self.write_system_file()
 
         # write energy system folder
         self.energy_system.write()
@@ -354,14 +346,32 @@ class Model:
 
         print("Done")
 
+    def write_system_file(self) -> None:
+        # Step 3: Convert the Pydantic model instance to a dictionary
+        system_json = self.config.system.model_dump()
+
+        system_json["set_conversion_technologies"] = [
+            tech.name for tech in self.conversion_technologies.values()
+        ]
+        system_json["set_transport_technologies"] = [
+            tech.name for tech in self.transport_technologies.values()
+        ]
+        system_json["set_storage_technologies"] = [
+            tech.name for tech in self.storage_technologies.values()
+        ]
+
+        # Step 4: Write the dictionary to a JSON file
+        with open(self.output_path / "system.json", "w") as f:
+            json.dump(system_json, f, indent=4)
+
     # -------- Validate model ------------------------------------------------------
 
-    def validate(self):
+    def validate(self) -> None:
         # check that all carriers of technologies are defined
-        self._chech_energy_system()
+        self._check_energy_system()
         self._check_carriers()
 
-    def _chech_energy_system(self):
+    def _check_energy_system(self) -> None:
         """
         Verifies that the energy system is complete, i.e. that all technologies
         and carriers are included in the energy system.
@@ -369,7 +379,7 @@ class Model:
         if self.energy_system is None:
             raise ValueError("Energy system is not defined.")
 
-    def _check_carriers(self):
+    def _check_carriers(self) -> None:
         """
         Verifies the carriers in the model.
 
@@ -381,9 +391,15 @@ class Model:
         - all carriers used in technologies are defined in the model.
         """
         # ToDo -- consider moving some of these to setters
-        carriers = set()
+        carriers: set[Carrier] = set()
+
         for technology in self.technologies.values():
-            reference_carrier = set(technology.reference_carrier.default_value)
+
+            reference_carrier = (
+                set(technology.reference_carrier.default_value)
+                if isinstance(technology.reference_carrier.default_value, Iterable)
+                else {technology.reference_carrier.default_value}
+            )
 
             if len(reference_carrier) != 1:
                 raise ValueError(
@@ -394,9 +410,22 @@ class Model:
             carriers = carriers.union(reference_carrier)
 
         for technology in self.conversion_technologies.values():
-            input_carriers = set(technology.input_carrier.default_value)
-            output_carriers = set(technology.output_carrier.default_value)
-            reference_carrier = set(technology.reference_carrier.default_value)
+
+            input_carriers = (
+                set(technology.input_carrier.default_value)
+                if isinstance(technology.input_carrier.default_value, Iterable)
+                else {technology.input_carrier.default_value}
+            )
+            output_carriers = (
+                set(technology.output_carrier.default_value)
+                if isinstance(technology.output_carrier.default_value, Iterable)
+                else {technology.output_carrier.default_value}
+            )
+            reference_carrier = (
+                set(technology.reference_carrier.default_value)
+                if isinstance(technology.reference_carrier.default_value, Iterable)
+                else {technology.reference_carrier.default_value}
+            )
 
             tech_carriers = input_carriers.union(output_carriers)
 

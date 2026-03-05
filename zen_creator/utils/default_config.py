@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -62,7 +62,7 @@ class SystemConfig(Subscriptable):
     Config for settings in system.json.
     """
 
-    nodes: list[str]
+    set_nodes: Optional[list[str]] = None
     set_transport_tehnologies_loss_exponential: list[str] = Field(default_factory=list)
     use_existing_capacities: bool = False
     allow_investment: bool = True
@@ -88,7 +88,7 @@ class SystemConfig(Subscriptable):
 
 
 class ENSOEAPIConfig(Subscriptable):
-    api_key: str
+    api_key: Optional[str] = None
 
 
 class DatasetConfig(Subscriptable):
@@ -118,13 +118,16 @@ class Config(Subscriptable):
     name: str
     source_path: str
     output_folder: str = "./models/"
-    sectors: SectorConfig = Field(default_factor=SectorConfig)
+    sectors: SectorConfig = Field(default_factory=SectorConfig)
     elements: ElementConfig = Field(default_factory=ElementConfig)
-    system: SystemConfig = Field(default_factor=SystemConfig)
+    system: SystemConfig = Field(default_factory=SystemConfig)
     data: DataConfig = Field(default_factory=DataConfig)
 
 
 def load_config(path: str | Path) -> Config:
+
+    if not isinstance(path, (str, Path)):
+        raise TypeError(f"Expected path of type `str` or `Path`, got {type(path)}")
 
     config_path = Path(path)
 

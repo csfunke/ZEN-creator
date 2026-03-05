@@ -1,15 +1,21 @@
-import importlib
-import inspect
-import pkgutil
-from pathlib import Path
+from .DIW import DIW
+from .ECB import ECB
+from .entsoe import ENTSOEAPI
+from .eu_building_observatory import EUBuildingObservatory
+from .eurostat import EurostatApi
+from .nuts_shp import NUTSshp
+from .potencia import Potencia
+from .tyndp_edges import TYNDP_2020_edges
+from .when2heat import When2Heat
 
-__all__ = []
-
-for _, module_name, _ in pkgutil.iter_modules([str(Path(__file__).parent)]):
-    module = importlib.import_module(f".{module_name}", package=__name__)
-
-    for name, obj in inspect.getmembers(module, inspect.isclass):
-
-        if obj.__module__ == module.__name__:
-            globals()[name] = obj
-            __all__.append(name)
+__all__ = [
+    "ECB",
+    "ENTSOEAPI",
+    "EurostatApi",
+    "EUBuildingObservatory",
+    "When2Heat",
+    "DIW",
+    "Potencia",
+    "NUTSshp",
+    "TYNDP_2020_edges",
+]

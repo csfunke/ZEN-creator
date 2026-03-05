@@ -13,6 +13,8 @@ from zen_creator.utils.attribute import Attribute
 
 
 class Element:
+
+    name: str = "element"
     subpath: ClassVar[str] = ""
     _element_registry: dict[str, Type[Element]] = {}
 

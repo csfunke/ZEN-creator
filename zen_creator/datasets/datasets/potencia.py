@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
     pass
@@ -14,7 +14,7 @@ from zen_creator.datasets.datasets.ECB import ECB
 from zen_creator.datasets.techno_economic_dataset import TechnoEconomicDataset
 
 
-class Potencia(TechnoEconomicDataset):
+class Potencia(TechnoEconomicDataset[Dict[str, pd.DataFrame]]):
     """Dataset class for the Potencia source data."""
 
     name = "potencia"
@@ -37,17 +37,23 @@ class Potencia(TechnoEconomicDataset):
         )
 
     # ------ Metadata properties ------
-    def _get_author(self) -> str:
+    def _set_title(self) -> str:
+        return "The POTEnCIA Central scenario: an EU energy outlook to 2050. "
+
+    def _set_author(self) -> str:
         return (
             "Mantzos, L., Wiesenthal, T., Neuwahl, F. & Rózsai, M. "
             "The POTEnCIA Central scenario: an EU energy outlook to 2050. "
             "JRC Science for Policy Report 346 (2019) doi:10.2760/32835."
         )
 
-    def _get_publication_year(self) -> int:
+    def _set_publication(self) -> str:
+        return "JRC Science for Policy Report 346"
+
+    def _set_publication_year(self) -> int:
         return 2019
 
-    def _get_url(self) -> str:
+    def _set_url(self) -> str:
         return "https://publications.jrc.ec.europa.eu/repository/handle/JRC118353"
 
     @property
@@ -58,11 +64,11 @@ class Potencia(TechnoEconomicDataset):
     def unit(self) -> str:
         return "Euro/kW"
 
-    def _get_path(self) -> Path:
+    def _set_path(self) -> Path:
         return self.source_path / "07-techno_economic_parameters" / self.name
 
     # ----- Methods to get data -----
-    def _get_data(self):
+    def _set_data(self):
         """Method to load the raw techno-economic data."""
         url = self.path / "PG_technology_Central_2018.xlsx"
         raw_finance_data = pd.read_excel(url, sheet_name="tech_proj")

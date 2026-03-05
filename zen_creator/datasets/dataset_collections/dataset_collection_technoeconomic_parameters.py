@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 import pandas as pd
 
+from zen_creator.datasets import TechnoEconomicDataset
 from zen_creator.datasets.dataset_collection import DatasetCollection
 from zen_creator.datasets.datasets.DIW import DIW
 from zen_creator.datasets.datasets.potencia import Potencia
@@ -36,6 +37,8 @@ class EconomicParameters(DatasetCollection):
         """Get the finance data of a technology."""
         df_finance_list = []
         for dataset in self.data.values():
+            if not isinstance(dataset, TechnoEconomicDataset):
+                continue
             if technology in dataset.available_technologies_finance:
                 df_finance = dataset.get_cost_data(
                     technology, variable, config.time_settings.data_general_year
@@ -68,6 +71,8 @@ class EconomicParameters(DatasetCollection):
         """Get the lifetime of a technology."""
         df_lifetimes = {}
         for dataset in self.data.values():
+            if not isinstance(dataset, TechnoEconomicDataset):
+                continue
             if technology in dataset.available_technologies_lifetime:
                 df_lt = dataset.get_lifetime(technology)
                 assert (
@@ -92,6 +97,8 @@ class EconomicParameters(DatasetCollection):
         """Get the efficiency of a technology."""
         df_effs = {}
         for dataset in self.data.values():
+            if not isinstance(dataset, TechnoEconomicDataset):
+                continue
             if technology in dataset.available_technologies_efficiency:
                 df_eff = dataset.get_efficiency(technology)
                 assert (

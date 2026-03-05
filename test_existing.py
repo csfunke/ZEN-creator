@@ -2,7 +2,7 @@ from zen_creator.model import Model
 from zen_creator.utils.default_config import load_config
 
 config_path = (
-    "C:\\Users\\funkec\\OneDrive - ETH Zurich\Documents\\"
+    "C:\\Users\\funkec\\OneDrive - ETH Zurich\\Documents\\"
     "01_Projects\\03_ZEN-garden\\00_ZEN_Creator_Raw_Data\\"
     "raw_data\\config_test.yaml"
 )

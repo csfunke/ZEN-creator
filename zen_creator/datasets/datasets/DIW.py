@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 if TYPE_CHECKING:
     pass
@@ -13,7 +13,7 @@ from zen_creator.datasets.datasets.ECB import ECB
 from zen_creator.datasets.techno_economic_dataset import TechnoEconomicDataset
 
 
-class DIW(TechnoEconomicDataset):
+class DIW(TechnoEconomicDataset[Dict[str, pd.DataFrame]]):
     """Dataset class for the DIW source data."""
 
     name = "diw"
@@ -28,16 +28,22 @@ class DIW(TechnoEconomicDataset):
         )
 
     # ------ Metadata properties ------
-    def _get_author(self) -> str:
+    def _set_title(self) -> str:
         return "DIW Berlin"
 
-    def _get_publication_year(self) -> int:
+    def _set_author(self) -> str:
+        return "DIW Berlin"
+
+    def _set_publication(self) -> str:
+        return ""
+
+    def _set_publication_year(self) -> int:
         return 2018
 
-    def _get_url(self) -> str:
+    def _set_url(self) -> str:
         return "https://ars.els-cdn.com/content/image/1-s2.0-S2211467X19301142-mmc1.pdf"
 
-    def _get_path(self) -> Path:
+    def _set_path(self) -> Path:
         return self.source_path / "07-techno_economic_parameters" / self.name
 
     @property
@@ -49,7 +55,7 @@ class DIW(TechnoEconomicDataset):
         return "Euro/kW"
 
     # ----- Methods to get data -----
-    def _get_data(self):
+    def _set_data(self):
         """Method to load the raw techno-economic data."""
         url = self.path / "capex_diw.xlsx"
         raw_finance_data = pd.read_excel(url, header=1, sheet_name="costs").set_index(

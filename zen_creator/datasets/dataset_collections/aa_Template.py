@@ -43,7 +43,8 @@ class Template(DatasetCollection):
         internal.
         """
         attr = Attribute("max_load", element)
-        data = self.data["DIW Berlin"]  # use the dataset property to access the dataset
+        # use the dataset property to access the dataset
+        data = self.data["DIW Berlin"].data
         unit = self._max_load_unit()
         attr.set_data(default_value=0, df=data, unit=unit)
         return attr

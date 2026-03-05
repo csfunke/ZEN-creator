@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Any, Dict, Generic, Optional, TypeVar, Union
 
 import pandas as pd
 
 from zen_creator.utils.singleton_registry_meta import SingletonRegistryMeta
 
+# return type of data property
+T = TypeVar("T", bound=Union[pd.DataFrame, Dict[str, pd.DataFrame]])
 
-class Dataset(ABC, metaclass=SingletonRegistryMeta):
+
+class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
     """
     Abstract base class for datasets.
 
@@ -27,19 +30,23 @@ class Dataset(ABC, metaclass=SingletonRegistryMeta):
         )
 
         # Internal storage for validated properties
+        self._title: str
         self._author: str
+        self._publication: str
         self._publication_year: int
         self._url: str
         self._doi: Optional[str] = None
         self._path: Path | None
-        self._data: Union[pd.DataFrame, Dict[str, pd.DataFrame]]
+        self._data: Any
 
         # Initialize required fields using abstract hooks
-        self.author = self._get_author()
-        self.publication_year = self._get_publication_year()
-        self.url = self._get_url()
-        self.path = self._get_path()
-        self.data = self._get_data()
+        self.title = self._set_title()
+        self.author = self._set_author()
+        self.publication = self._set_publication()
+        self.publication_year = self._set_publication_year()
+        self.url = self._set_url()
+        self.path = self._set_path()
+        self.data = self._set_data()
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -49,6 +56,18 @@ class Dataset(ABC, metaclass=SingletonRegistryMeta):
             )
 
     # ------- properties ----------------------------
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, value: str) -> None:
+        if not isinstance(value, str):
+            raise TypeError(
+                "title must be `str`, " f"got '{type(value).__name__}' instead."
+            )
+        self._title = value
+
     @property
     def author(self) -> str:
         return self._author
@@ -60,6 +79,18 @@ class Dataset(ABC, metaclass=SingletonRegistryMeta):
                 "author must be `str`, " f"got '{type(value).__name__}' instead."
             )
         self._author = value
+
+    @property
+    def publication(self) -> str:
+        return self._publication
+
+    @publication.setter
+    def publication(self, value: str) -> None:
+        if not isinstance(value, str):
+            raise TypeError(
+                "publication must be `str`, " f"got '{type(value).__name__}' instead."
+            )
+        self._publication = value
 
     @property
     def publication_year(self) -> int:
@@ -99,11 +130,13 @@ class Dataset(ABC, metaclass=SingletonRegistryMeta):
         self._doi = value
 
     @property
-    def path(self) -> Path | None:
+    def path(self) -> Path:
+        if self._path is None:
+            raise ValueError("Path has not yet been set or does not exist")
         return self._path
 
     @path.setter
-    def path(self, value: str) -> None:
+    def path(self, value: Path | None) -> None:
         if value is None:
             self._path = None
             return
@@ -116,11 +149,12 @@ class Dataset(ABC, metaclass=SingletonRegistryMeta):
         self._path = value
 
     @property
-    def data(self) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+    def data(self) -> T:
         return self._data
 
     @data.setter
-    def data(self, value: pd.DataFrame | dict[str, pd.DataFrame]) -> None:
+    def data(self, value: T) -> None:
+        # runtime type check
         if isinstance(value, pd.DataFrame):
             self._data = value
         elif isinstance(value, dict):
@@ -128,17 +162,21 @@ class Dataset(ABC, metaclass=SingletonRegistryMeta):
                 isinstance(k, str) and isinstance(v, pd.DataFrame)
                 for k, v in value.items()
             ):
-                raise TypeError("data must be `dict[str, DataFrame]`")
+                raise TypeError("data must be dict[str, DataFrame]")
             self._data = value
         else:
-            raise TypeError("data must be `DataFrame` or " "`dict[str, DataFrame]`")
+            raise TypeError(
+                f"data must be pd.DataFrame or dict[str, DataFrame], got {type(value)}"
+            )
 
     # --------- metadata ---------------------------
     @property
     def metadata(self) -> dict[str, object]:
         return {
             "name": self.name,
+            "title": self.title,
             "author": self.author,
+            "publication": self.publication,
             "publication_year": self.publication_year,
             "url": self.url,
             "doi": self.doi,
@@ -147,21 +185,29 @@ class Dataset(ABC, metaclass=SingletonRegistryMeta):
     # ---------------- Abstract hooks ------------------
 
     @abstractmethod
-    def _get_author(self) -> str:
+    def _set_title(self) -> str:
+        """Return the title for this dataset."""
+
+    @abstractmethod
+    def _set_author(self) -> str:
         """Return the author string for this dataset."""
 
     @abstractmethod
-    def _get_publication_year(self) -> int:
+    def _set_publication(self) -> str:
+        """Return the publication for this dataset."""
+
+    @abstractmethod
+    def _set_publication_year(self) -> int:
         """Return the publication year for this dataset."""
 
     @abstractmethod
-    def _get_url(self) -> str:
+    def _set_url(self) -> str:
         """Return the URL for this dataset."""
 
     @abstractmethod
-    def _get_path(self) -> Path | None:
+    def _set_path(self) -> Path | None:
         """Return the file path to the dataset."""
 
     @abstractmethod
-    def _get_data(self) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+    def _set_data(self) -> T:
         """Return the dataset as a DataFrame or dict of DataFrames."""

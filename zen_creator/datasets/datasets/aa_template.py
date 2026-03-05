@@ -7,7 +7,7 @@ from zen_creator.elements.element import Element
 from zen_creator.utils.attribute import Attribute
 
 
-class Template(Dataset):
+class Template(Dataset[pd.DataFrame]):
     name = "template"
 
     def __init__(self, source_path: Path | str):
@@ -22,7 +22,7 @@ class Template(Dataset):
     def _get_url(self) -> str:
         return "https://example.com/dataset.csv"
 
-    def _get_path(self) -> Path:
+    def _get_path(self) -> Path | None:
         return Path(".")
 
     def _get_data(self) -> pd.DataFrame:
@@ -45,8 +45,8 @@ class Template(Dataset):
         attr = Attribute("max_load", element)
         data = self.data  # use the dataset property to access the dataset
         unit = self._max_load_unit()
-        attr.set_data(default_value=data, df=data, unit=unit)
+        attr.set_data(default_value=0, df=data, unit=unit)
         return attr
 
-    def _max_load_unit():
+    def _max_load_unit(self):
         return "MW"

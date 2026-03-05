@@ -1,13 +1,15 @@
 from pathlib import Path
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 
 from zen_creator.datasets.dataset import Dataset
+from zen_creator.elements.element import Element
 from zen_creator.utils.attribute import Attribute
 
 
-class TYNDP_2020_edges(Dataset):
+class TYNDP_2020_edges(Dataset[Dict[str, pd.DataFrame]]):
     name = "tyndp_2020_edges"
 
     def __init__(self, source_path: Path | str):
@@ -25,7 +27,7 @@ class TYNDP_2020_edges(Dataset):
     def _get_path(self) -> Path:
         return self.source_path / "01-energy_system" / "nodes_edges"
 
-    def _get_data(self) -> pd.DataFrame:
+    def _get_data(self) -> Dict[str, pd.DataFrame]:
         # nodes from ENTSOE TYNDP 2020-scenario.xlsx
         # load nodes and edges
         nodes = pd.read_csv(
@@ -39,10 +41,10 @@ class TYNDP_2020_edges(Dataset):
 
         return {"nodes": nodes, "edges": edges}
 
-    def get_set_edges(self, element):
+    def get_set_edges(self, element: Element) -> Attribute:
 
         # get list of nodes used in the model
-        set_nodes = np.array(element.model.config.main_settings.nodes)
+        set_nodes = np.array(element.model.config.system.set_nodes)
 
         # load data
         edges = self.data["edges"]

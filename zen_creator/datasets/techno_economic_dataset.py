@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, Optional
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import pandas as pd
 
-from zen_creator.datasets.dataset import Dataset
-from zen_creator.utils.helpers import get_partial_index
+from zen_creator.datasets.dataset import Dataset, T
 
 
-class TechnoEconomicDataset(Dataset):
+class TechnoEconomicDataset(Dataset[T], Generic[T]):
     """Dataset class for techno-economic source data."""
 
     name = "techno_economic_dataset"
@@ -20,10 +22,10 @@ class TechnoEconomicDataset(Dataset):
     def __init__(self, source_path: Path | str):
         super().__init__(source_path=source_path)
 
-        self.available_technologies_finance = []
-        self.available_technologies_efficiency = []
-        self.available_technologies_lifetime = []
-        self.available_technologies_construction_time = []
+        self.available_technologies_finance: list[str] = []
+        self.available_technologies_efficiency: list[str] = []
+        self.available_technologies_lifetime: list[str] = []
+        self.available_technologies_construction_time: list[str] = []
 
     @property
     @abstractmethod
@@ -36,7 +38,9 @@ class TechnoEconomicDataset(Dataset):
         pass
 
     @abstractmethod
-    def get_cost_data(self, technology: str, variable: str) -> pd.DataFrame:
+    def get_cost_data(
+        self, technology: str, variable: str, target_year: int
+    ) -> pd.DataFrame:
         """Method to get the finance data of a technology."""
         pass
 
@@ -71,45 +75,60 @@ class TechnoEconomicDataset(Dataset):
             units = {"money": "Euro", "energy": "kWh", "power": "kW"}
         return units[unit]
 
-    def rename_index(self, df: pd.DataFrame, rename_map: dict) -> pd.DataFrame:
-        """Method to rename index based on a mapping dictionary."""
-        df_renamed = df.copy()
-        if isinstance(df_renamed, pd.Series):
-            df_renamed = df_renamed.to_frame()
-        inv_map = {}
-        max_len = max(
-            [len(v) for v in rename_map.values() if isinstance(v, tuple)] + [1]
-        )
-        for k, v in rename_map.items():
-            inv_map.setdefault(v, []).append(k)
+    def rename_index(
+        self,
+        df: pd.DataFrame | pd.Series,
+        rename_map: dict[str, str | tuple[str, ...]],
+    ) -> pd.DataFrame:
+        """
+        Rename dataframe index according to a mapping using a vectorized approach.
 
-        df_renamed["new_ids"] = df_renamed.index.map(
-            lambda idx: get_partial_index(idx, inv_map=inv_map)
-        )
-        df_renamed = df_renamed[df_renamed["new_ids"].notna()]
-        df_renamed = df_renamed.explode("new_ids")
-        if max_len < df_renamed.index.nlevels:
-            levels_to_unstack = df_renamed.index.names[
-                max_len : df_renamed.index.nlevels
-            ]
-            existing_levels = [
-                level
-                for level in df_renamed.index.names
-                if level not in levels_to_unstack
-            ]
-            df_renamed = df_renamed.reset_index()
-            df_renamed = df_renamed.set_index(["new_ids"] + levels_to_unstack)
-            df_renamed = df_renamed.drop(existing_levels, axis=1)
-        else:
-            df_renamed = df_renamed.set_index("new_ids")
-        return df_renamed
+        Supports:
+            old_id -> new_id
+            old_id -> (new_id1, new_id2, ...)
+
+        Rows are duplicated if multiple new IDs are assigned.
+        """
+
+        import pandas as pd
+
+        # Ensure DataFrame
+        if isinstance(df, pd.Series):
+            df = df.to_frame()
+        df = df.copy()
+
+        # -----------------------------
+        # Normalize rename_map: flatten tuples
+        # -----------------------------
+        records = []
+        for old_id, new_ids in rename_map.items():
+            if not isinstance(new_ids, tuple):
+                new_ids = (new_ids,)
+            for new_id in new_ids:
+                records.append((old_id, new_id))
+
+        mapping_df = pd.DataFrame(records, columns=["old_id", "new_id"])
+
+        # -----------------------------
+        # Merge with the dataframe index
+        # -----------------------------
+        df = df.reset_index()
+        df = df.merge(mapping_df, left_on=df.columns[0], right_on="old_id", how="inner")
+
+        # -----------------------------
+        # Handle multiple new_ids per row
+        # -----------------------------
+        df = df.drop(columns=["old_id"])
+        df = df.set_index("new_id")
+
+        return df
 
     def set_available_technologies(
         self,
-        finance: pd.DataFrame = None,
-        efficiency: pd.DataFrame = None,
-        lifetime: pd.DataFrame = None,
-        construction_time: pd.DataFrame = None,
+        finance: Optional[pd.DataFrame] = None,
+        efficiency: Optional[pd.DataFrame] = None,
+        lifetime: Optional[pd.DataFrame] = None,
+        construction_time: Optional[pd.DataFrame] = None,
     ):
         """Set the available technologies for the data source."""
         if finance is not None:

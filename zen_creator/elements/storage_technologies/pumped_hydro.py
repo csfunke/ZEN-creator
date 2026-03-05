@@ -20,7 +20,8 @@ class PumpedHydro(StorageTechnology):
 
     def _set_lifetime(self) -> Attribute:
         attr = self._lifetime
-        return attr.set_data(default_value=50, source="assumption")
+        # return attr.set_data(default_value=50, source="assumption")
+        return attr
 
     def _set_reference_carrier(self) -> Attribute:
         return Attribute(

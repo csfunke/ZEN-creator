@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -18,27 +18,27 @@ class Attribute:
         self,
         name: str,
         element: Element,
-        unit: str = None,
-        default_value: Union[float, list] = None,
-        df: Union[pd.DataFrame, pd.Series] = None,
-        source: str = None,
+        unit: Optional[str] = None,
+        default_value: Optional[Union[float, list]] = None,
+        df: Optional[Union[pd.DataFrame, pd.Series]] = None,
+        source: Optional[str] = None,
     ):
-        self.name = name
-        self.element = element
-        self.default_value = default_value
-        self.unit = unit
-        self.df = df
-        self.yearly_variations_df = None
-        self.source = source
+        self.name: str = name
+        self.element: Element = element
+        self.default_value: Optional[Union[float, list]] = default_value
+        self.unit: Optional[str] = unit
+        self.df: Optional[Union[pd.DataFrame, pd.Series]] = df
+        self.yearly_variations_df: pd.DataFrame | pd.Series | None = None
+        self.source: str | dict[str, Any] | None = source
         # self.overwrite_from_existing_model()
 
     def set_data(
         self,
-        default_value: Union[float, list] = None,
-        unit: str = None,
-        df: Union[pd.DataFrame, pd.Series] = None,
-        yearly_variations_df: Union[pd.DataFrame, pd.Series] = None,
-        source: str = None,
+        default_value: Optional[Union[float, list]] = None,
+        unit: Optional[str] = None,
+        df: Optional[Union[pd.DataFrame, pd.Series]] = None,
+        yearly_variations_df: Optional[Union[pd.DataFrame, pd.Series]] = None,
+        source: Optional[str] = None,
     ):
         if default_value is not None:
             self.set_default_value(default_value)
@@ -122,7 +122,7 @@ class Attribute:
         self.df = df
         return self
 
-    def get_df(self) -> Union[pd.DataFrame, pd.Series]:
+    def get_df(self) -> Union[pd.DataFrame, pd.Series, None]:
         return self.df
 
     def set_yearly_variations_df(
@@ -151,7 +151,7 @@ class Attribute:
         self.yearly_variations_df = yearly_variations_df
         return self
 
-    def get_yearly_variations_df(self) -> Union[pd.DataFrame, pd.Series]:
+    def get_yearly_variations_df(self) -> Union[pd.DataFrame, pd.Series, None]:
         return self.yearly_variations_df
 
     def set_source(self, source: str):
@@ -259,24 +259,3 @@ class Attribute:
         if yearly_variations_file_path.exists():
             df = pd.read_csv(yearly_variations_file_path, index_col=0)
             self.set_yearly_variations_df(df)
-
-
-class SystemAttribute(Attribute):
-    def __init__(
-        self,
-        name: str,
-        element: Element,
-        value: Union[float, list, bool] = None,
-        default_value: Union[float, list, bool] = None,
-    ):
-        self.value = value
-        super().__init__(name=name, element=element, default_value=default_value)
-
-    def overwrite_from_existing_model(self, existing_element_path: Path):
-        system_file_path = existing_element_path / "system.json"
-        if system_file_path.exists():
-
-            with open(system_file_path, "r") as f:
-                system_data = json.load(f)
-            if self.name in system_data:
-                self.value = system_data[self.name]
