@@ -18,8 +18,33 @@ from zen_creator.utils.default_config import Config, load_config
 
 
 class Model:
-    def __init__(self, config: Config | str | Path):
+    """Structured representation of the ZEN-garden input data.
 
+    This class stores the input data for the ZEN-garden energy system
+    model in a structured way. It provides methods to build, modify,
+    validate, and write the model to the input data.
+
+    Attributes:
+        config (Config): The configuration object for the model.
+        name (str): The name of the model.
+        output_folder (Path): The folder where the model output will be saved.
+        source_path (Path): The path to the source data.
+        energy_system (EnergySystem): Object representing all data in the
+            "energy_system" folder of the ZEN-garden input data.
+        elements (dict[str, Element]): Dictionary of elements (carriers and
+            technologies) present in the model.
+    """
+
+    def __init__(self, config: Config | str | Path):
+        """Initialize a new Model instance.
+
+        Args:
+            config (Config | str | Path): The configuration for the model.
+                Can be a Config object, or a path to a config file.
+
+        Raises:
+            TypeError: If config is not a valid type.
+        """
         # set attributes from input arguments
         self.config: Config = (
             config if isinstance(config, Config) else load_config(config)
@@ -45,10 +70,31 @@ class Model:
     def from_existing(
         cls, existing_model_path: Path | str, config: Config | str | Path
     ):
-        """
-        Construct model from an existing model.
+        """Construct a model from an ZEN-garden input folder.
 
-        # ToDo
+        This method loads the data of an existing ZEN-garden model
+        into the data structure. The existing model must be in the
+        proper data format for ZEN-garden.
+
+        This function performs the following steps:
+            1. Create a Model object using the configuration file. This
+               object only has the elements (technologies and carriers)
+               specified in the configurations.
+            2. Overwrite the Model elements using data from the existing
+               model. Once again, only elements specified in the
+               configuration file are included in the model.
+
+        Args:
+            existing_model_path (Path | str): Path to the existing model.
+            config (Config | str | Path): Configuration file for the
+                new model.Can be a Config object, or a path to a
+                config file.
+
+        Returns:
+            Model: A new Model instance initialized from the existing model.
+
+        Raises:
+            ValueError: If the existing model path does not exist.
         """
         existing_model_path = Path(existing_model_path)
         if not existing_model_path.exists():
@@ -73,6 +119,10 @@ class Model:
     def carriers(self) -> dict[str, Carrier]:
         """
         Returns dictionary of all carriers in the current model.
+
+        Returns:
+            dict[str, Carrier]: Mapping of carrier names to
+                Carrier objects.
         """
         return {
             name: element
@@ -82,6 +132,12 @@ class Model:
 
     @property
     def technologies(self) -> dict[str, Technology]:
+        """Dictionary of all technologies in the current model.
+
+        Returns:
+            dict[str, Technology]: Mapping of technology names to
+                Technology objects.
+        """
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -90,6 +146,12 @@ class Model:
 
     @property
     def storage_technologies(self) -> dict[str, StorageTechnology]:
+        """Dictionary of all storage technologies in the current model.
+
+        Returns:
+            dict[str, StorageTechnology]: Mapping of storage technology
+                names to objects.
+        """
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -98,6 +160,12 @@ class Model:
 
     @property
     def conversion_technologies(self) -> dict[str, ConversionTechnology]:
+        """Dictionary of all conversion technologies in the current model.
+
+        Returns:
+            dict[str, ConversionTechnology]: Mapping of conversion
+                technology names to objects.
+        """
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -106,6 +174,12 @@ class Model:
 
     @property
     def transport_technologies(self) -> dict[str, TransportTechnology]:
+        """Dictionary of all transport technologies in the current model.
+
+        Returns:
+            dict[str, TransportTechnology]: Mapping of transport
+                technology names to objects.
+        """
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -114,6 +188,12 @@ class Model:
 
     @property
     def retrofitting_technologies(self) -> dict[str, RetrofittingTechnology]:
+        """Dictionary of all retrofitting technologies in the current model.
+
+        Returns:
+            dict[str, RetrofittingTechnology]: Mapping of retrofitting
+                technology names to objects.
+        """
         return {
             name: element
             for (name, element) in self.elements.items()
@@ -124,6 +204,13 @@ class Model:
     def output_path(self) -> Path:
         """
         Output path where model will be saved.
+
+        The output path consists of the output folder specified in the
+        configurations and the model name.
+
+        Side effects:
+            Creates the folder corresponding to the output path if it
+            does not exist.
         """
         output_path = self.output_folder / self.name
 
@@ -141,8 +228,13 @@ class Model:
 
     @output_folder.setter
     def output_folder(self, value: Path):
-        """
-        Validates output path.
+        """Set the output folder and validate the input.
+
+        Args:
+            value (Path): The path to the output folder.
+
+        Raises:
+            TypeError: If value is not a Path instance.
         """
         if not isinstance(value, Path):
             raise TypeError(
@@ -160,8 +252,14 @@ class Model:
 
     @source_path.setter
     def source_path(self, value: Path):
-        """
-        Validates source path.
+        """Set the source path and validate the input.
+
+        Args:
+            value (Path): The path to the source data.
+
+        Raises:
+            TypeError: If value is not a Path instance.
+            ValueError: If the path does not exist.
         """
         if not isinstance(value, Path):
             raise TypeError(
@@ -175,8 +273,15 @@ class Model:
     # -------- Adding / Removing Elements  -----------------------------------------
 
     def add_element_by_name(self, element: str) -> None:
-        """
-        ToDo.
+        """Add an element to the model by its name.
+
+        Args:
+            element (str): The name of the element to add.
+
+        Raises:
+            TypeError: If element is not a string.
+            ValueError: If the element is not registered. Elements get
+                registered when their class definitions are imported.
         """
         if not isinstance(element, str):
             raise TypeError(
@@ -187,15 +292,25 @@ class Model:
         element_cls = Element._element_registry.get(element)
 
         if element_cls is None:
-            raise ValueError(f"Element '{element}' is not registered.")
+            raise ValueError(
+                f"Element '{element}' is not registered. Please ensure "
+                "that the class corresponding to the element has been "
+                "imported."
+            )
 
         self.add_element(element_cls)
 
         return
 
     def add_element(self, element_cls: Type[Element]) -> None:
-        """
-        Adds an element to the model.
+        """Add an element to the model.
+
+        Args:
+            element_cls (Type[Element]): The element class to
+                instantiate and add.
+
+        Raises:
+            TypeError: If element_cls is not a subclass of Element.
         """
         # check that element is valid
         if element_cls is None or not issubclass(element_cls, Element):
@@ -220,6 +335,10 @@ class Model:
     def remove_element(self, element_cls: Type[Element]) -> None:
         """
         Removes an element from the model.
+
+        Args:
+            element_cls (Type[Element]): The element class to
+                remove.
         """
         if not isinstance(element_cls, type) or not issubclass(element_cls, Element):
             raise TypeError(
@@ -250,13 +369,23 @@ class Model:
         self.remove_element_by_name(name)
 
     def remove_element_by_name(self, name: str) -> None:
+        """Remove an element from the model by its name.
 
+        Args:
+            name (str): The name of the element to remove.
+        """
         print(f"Remove element {name}")
         del self.elements[name]
 
     def add_sector_by_name(self, sector: str) -> None:
-        """
-        ToDo.
+        """Add a sector to the model by its name.
+
+        Args:
+            sector (str): The name of the sector to add.
+
+        Raises:
+            TypeError: If sector is not a string.
+            ValueError: If the sector is not registered.
         """
         if not isinstance(sector, str):
             raise TypeError(
@@ -274,8 +403,13 @@ class Model:
         return
 
     def add_sector(self, sector_cls: Type[Sector]) -> None:
-        """
-        ToDo.
+        """Add a sector to the model.
+
+        Args:
+            sector_cls (Type[Sector]): The sector class to add.
+
+        Raises:
+            TypeError: If sector_cls is not a subclass of Sector.
         """
         if not isinstance(sector_cls, type) or not issubclass(sector_cls, Sector):
             raise TypeError(
@@ -291,8 +425,13 @@ class Model:
         return
 
     def remove_sector(self, sector_cls: Type[Sector]) -> None:
-        """
-        Todo
+        """Remove a sector from the model.
+
+        Args:
+            sector_cls (Type[Sector]): The sector class to remove.
+
+        Raises:
+            TypeError: If sector_cls is not a subclass of Sector.
         """
         if not isinstance(sector_cls, type) or not issubclass(sector_cls, Sector):
             raise TypeError(
@@ -323,6 +462,11 @@ class Model:
     # -------- Write model -----------------------------------------------------
 
     def write(self) -> None:
+        """Write the model to disk.
+
+        This method validates the model, removes any existing output directory,
+        writes the system file, and saves all elements.
+        """
         # verify completeness
         self.validate()
 
@@ -347,6 +491,11 @@ class Model:
         print("Done")
 
     def write_system_file(self) -> None:
+        """Write the system.json file for the model.
+
+        This method generates the system configuration dictionary and writes it
+        to system.json in the output directory.
+        """
         # Step 3: Convert the Pydantic model instance to a dictionary
         system_json = self.config.system.model_dump()
 
@@ -367,6 +516,11 @@ class Model:
     # -------- Validate model ------------------------------------------------------
 
     def validate(self) -> None:
+        """Validate the model for completeness and consistency.
+
+        This method checks that the energy system is defined and that all
+        carriers used in technologies are present in the model.
+        """
         # check that all carriers of technologies are defined
         self._check_energy_system()
         self._check_carriers()

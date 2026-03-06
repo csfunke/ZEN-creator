@@ -13,13 +13,29 @@ from zen_creator.utils.attribute import Attribute
 
 
 class Element:
+    """Base class for all elements in the ZEN model.
+
+    This class provides the foundation for carriers, technologies, and other
+    model components. It handles attribute management, path resolution, and
+    serialization.
+
+    Attributes:
+        name (str): The name of the element.
+        subpath (ClassVar[str]): Subpath for organizing element files.
+        _element_registry (dict[str, Type[Element]]): Registry of all element classes.
+    """
 
     name: str = "element"
     subpath: ClassVar[str] = ""
     _element_registry: dict[str, Type[Element]] = {}
 
     def __init__(self, model: Model, power_unit: str = "MW"):
+        """Initialize an Element instance.
 
+        Args:
+            model (Model): The model this element belongs to.
+            power_unit (str): The unit for power values. Defaults to "MW".
+        """
         # Attributes that should be saved
         self._attribute_names: list[str] = []
 
@@ -30,6 +46,14 @@ class Element:
         self.source_path: Path = model.source_path
 
     def __init_subclass__(cls, **kwargs):
+        """Initialize subclass and register it in the element registry.
+
+        Args:
+            **kwargs: Additional keyword arguments.
+
+        Raises:
+            Exception: If the subclass does not define a 'name' attribute.
+        """
         super().__init_subclass__(**kwargs)
         if not hasattr(cls, "name"):
             raise Exception(
@@ -41,12 +65,23 @@ class Element:
 
     @property
     def attributes(self) -> dict[str, Attribute]:
+        """Dictionary of all attributes for this element.
+
+        Returns:
+            dict[str, Attribute]: Mapping of attribute names to Attribute
+                objects.
+        """
         return {name: getattr(self, name) for name in self._attribute_names}
 
     @property
     def relative_output_path(self) -> Path:
-        """
-        Get output path relative to root model directory.
+        """Get the relative output path for this element.
+
+        The path is constructed by combining the element name with subpaths
+        from the class hierarchy.
+
+        Returns:
+            Path: The relative path for output files.
         """
         path = Path(self.name)
         for _cls in self.__class__.mro()[1:]:
@@ -57,8 +92,13 @@ class Element:
 
     @property
     def output_path(self) -> Path:
-        """
-        Get absolute output path and ensure directory exists.
+        """Get the absolute output path and ensure the directory exists.
+
+        Side Effects:
+            Creates the output path if it does not exist.
+
+        Returns:
+            Path: The absolute path to the output directory for this element.
         """
         output_path = self.get_output_path()
         output_path.mkdir(parents=True, exist_ok=True)
@@ -68,31 +108,47 @@ class Element:
     # ------- methods for building -------------------------------------
 
     def overwrite_from_existing_model(self, existing_model_path: Path):
+        """Overwrite attributes with values from an existing model.
+
+        Args:
+            existing_model_path (Path): Path to the existing model directory.
+        """
         existing_element_path = existing_model_path / self.relative_output_path
         for attribute in self.attributes.values():
             attribute.overwrite_from_existing_model(existing_element_path)
 
     def build(self):
-        """
-        Sets self.<attribute_name> = self._set_<attribute_name>() for all
-        attributes.
+        """Build the element by setting attributes from their setters.
+
+        This method calls the _set_<attribute_name> methods whenever
+        these exist. The attributes are set to the output of these
+        methods.
         """
         for name in self._attribute_names:
             setter = getattr(self, f"_set_{name}", None)
             if setter:
                 setattr(self, name, setter())
 
-    # Methods for validating
     def _validate_attribute(self, value: Attribute) -> None:
-        """Validate that the value is an Attribute instance."""
+        """Validate that the value is an Attribute instance.
+
+        Args:
+            value (Attribute): The value to validate.
+
+        Raises:
+            TypeError: If value is not an Attribute instance.
+        """
         if not isinstance(value, Attribute):
             raise TypeError(
                 f"Value must be an instance of Attribute, got {type(value)}"
             )
 
-    # ----------- methods for saving ---------------------------
     def write(self):
+        """Write the element to disk.
 
+        This method saves the attributes.json file and any associated
+        data files.
+        """
         # write attributes.json file
         self.save_attributes()
 
@@ -100,12 +156,19 @@ class Element:
         self.save_data()
 
     def get_output_path(self) -> Path:
-        """
-        Get path to element and create that directory.
+        """Get the path to the element output directory and create it.
+
+        Returns:
+            Path: The absolute path to the element's output directory.
         """
         return self.model.output_path / self.relative_output_path
 
     def attributes_to_dict(self) -> dict:
+        """Convert element attributes to a dictionary for serialization.
+
+        Returns:
+            dict: Dictionary representation of the element's attributes.
+        """
         output = {}
         for attr_name in self._attribute_names:
 
@@ -118,6 +181,7 @@ class Element:
         return output
 
     def save_attributes(self):
+        """Save the element's attributes to attributes.json."""
         print(f"Saving 'attributes.json' for element '{self.name}' ...")
 
         out_path = self.output_path
@@ -126,7 +190,7 @@ class Element:
             json.dump(output, f, indent=4)
 
     def save_data(self):
-
+        """Save the element's data files."""
         out_path = self.output_path
 
         for attr_name in self._attribute_names:

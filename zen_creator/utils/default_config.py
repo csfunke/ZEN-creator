@@ -125,7 +125,18 @@ class Config(Subscriptable):
 
 
 def load_config(path: str | Path) -> Config:
+    """Load a configuration from a YAML file.
 
+    Args:
+        path (str | Path): Path to the YAML configuration file.
+
+    Returns:
+        Config: The loaded configuration object.
+
+    Raises:
+        TypeError: If path is not a string or Path.
+        FileNotFoundError: If the configuration file does not exist.
+    """
     if not isinstance(path, (str, Path)):
         raise TypeError(f"Expected path of type `str` or `Path`, got {type(path)}")
 

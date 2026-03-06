@@ -17,13 +17,17 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
     Abstract base class for datasets.
 
     Subclasses must implement internal abstract hooks to provide
-    author, publication_year, url, and data.
+    author, title, publication, publication_year, url, and data.
     """
 
     name: str
 
     def __init__(self, source_path: str | Path | None):
+        """Initialize a Dataset instance.
 
+        Args:
+            source_path (str | Path | None): Path to the source data directory.
+        """
         print(f"Loading dataset `{self.name}`...")
         self.source_path: Path | None = (
             Path(source_path) if source_path is not None else None
@@ -49,15 +53,27 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
         self.data = self._set_data()
 
     def __init_subclass__(cls, **kwargs):
+        """Initialize subclass and ensure name attribute is defined.
+
+        Args:
+            **kwargs: Additional keyword arguments.
+
+        Raises:
+            Exception: If the subclass does not define a 'name' attribute.
+        """
         super().__init_subclass__(**kwargs)
         if not hasattr(cls, "name"):
             raise Exception(
                 f"Subclass {cls.__name__} should define a class variable " "" "'name'."
             )
 
-    # ------- properties ----------------------------
     @property
     def title(self) -> str:
+        """The title of the dataset.
+
+        Returns:
+            str: The dataset title.
+        """
         return self._title
 
     @title.setter
@@ -70,6 +86,11 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
 
     @property
     def author(self) -> str:
+        """The author of the dataset.
+
+        Returns:
+            str: The dataset author.
+        """
         return self._author
 
     @author.setter
@@ -82,6 +103,11 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
 
     @property
     def publication(self) -> str:
+        """The publication where the dataset was published.
+
+        Returns:
+            str: The publication name.
+        """
         return self._publication
 
     @publication.setter
@@ -94,6 +120,11 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
 
     @property
     def publication_year(self) -> int:
+        """The year the dataset was published.
+
+        Returns:
+            int: The publication year.
+        """
         return self._publication_year
 
     @publication_year.setter
@@ -107,6 +138,11 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
 
     @property
     def url(self) -> str:
+        """The URL where the dataset can be accessed.
+
+        Returns:
+            str: The dataset URL.
+        """
         return self._url
 
     @url.setter
@@ -119,6 +155,11 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
 
     @property
     def doi(self) -> Optional[str]:
+        """The DOI (Digital Object Identifier) for the dataset.
+
+        Returns:
+            Optional[str]: The DOI if available, None otherwise.
+        """
         return self._doi
 
     @doi.setter
@@ -131,6 +172,14 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
 
     @property
     def path(self) -> Path:
+        """The file path to the dataset.
+
+        Returns:
+            Path: The path to the dataset file.
+
+        Raises:
+            ValueError: If the path has not been set or does not exist.
+        """
         if self._path is None:
             raise ValueError("Path has not yet been set or does not exist")
         return self._path
@@ -150,6 +199,11 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
 
     @property
     def data(self) -> T:
+        """The dataset data.
+
+        Returns:
+            T: The dataset as a DataFrame or dict of DataFrames.
+        """
         return self._data
 
     @data.setter
@@ -169,9 +223,13 @@ class Dataset(ABC, Generic[T], metaclass=SingletonRegistryMeta):
                 f"data must be pd.DataFrame or dict[str, DataFrame], got {type(value)}"
             )
 
-    # --------- metadata ---------------------------
     @property
     def metadata(self) -> dict[str, object]:
+        """Metadata dictionary for the dataset.
+
+        Returns:
+            dict[str, object]: Dictionary containing dataset metadata.
+        """
         return {
             "name": self.name,
             "title": self.title,

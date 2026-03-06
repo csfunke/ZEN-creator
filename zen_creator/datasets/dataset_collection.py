@@ -17,6 +17,11 @@ class DatasetCollection(ABC, metaclass=SingletonRegistryMeta):
     name: str
 
     def __init__(self, source_path: Path | str):
+        """Initialize a DatasetCollection instance.
+
+        Args:
+            source_path (Path | str): Path to the source data directory.
+        """
         self.source_path = Path(source_path)  # Type: Path
 
         # Internal storage for validated properties
@@ -26,6 +31,14 @@ class DatasetCollection(ABC, metaclass=SingletonRegistryMeta):
         self.data = self._get_data()
 
     def __init_subclass__(cls, **kwargs):
+        """Initialize subclass and ensure name attribute is defined.
+
+        Args:
+            **kwargs: Additional keyword arguments.
+
+        Raises:
+            Exception: If the subclass does not define a 'name' attribute.
+        """
         super().__init_subclass__(**kwargs)
         if not hasattr(cls, "name"):
             raise Exception(
@@ -45,8 +58,13 @@ class DatasetCollection(ABC, metaclass=SingletonRegistryMeta):
     # ------------ setters -----------------------------
     @data.setter
     def data(self, value: Dict[str, Dataset]):
-        """
-        Validates data property when set.
+        """Set the data dictionary and validate its contents.
+
+        Args:
+            value (Dict[str, Dataset]): Dictionary of dataset names to Dataset objects.
+
+        Raises:
+            TypeError: If value is not a dict or contains invalid types.
         """
         if not isinstance(value, dict):
             raise TypeError(
@@ -70,8 +88,10 @@ class DatasetCollection(ABC, metaclass=SingletonRegistryMeta):
     # ----------- metadata -----------------------------
     @property
     def metadata(self) -> Dict[str, dict]:
-        """
-        Returns citation information for DatasetCollection.
+        """Metadata for all datasets in the collection.
+
+        Returns:
+            Dict[str, dict]: Dictionary mapping dataset names to their metadata.
         """
         metadata = {}
         for name, dataset in self.data.items():
