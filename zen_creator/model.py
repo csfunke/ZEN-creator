@@ -14,7 +14,7 @@ from zen_creator.elements import (
 )
 from zen_creator.elements.element import Element
 from zen_creator.sectors import Sector
-from zen_creator.utils.default_config import Config, load_config
+from zen_creator.utils.default_config import Config
 
 
 class Model:
@@ -47,7 +47,7 @@ class Model:
         """
         # set attributes from input arguments
         self.config: Config = (
-            config if isinstance(config, Config) else load_config(config)
+            config if isinstance(config, Config) else Config.load(config)
         )
         self.name: str = self.config.name
         self.output_folder: Path = Path(self.config.output_folder)
@@ -109,6 +109,7 @@ class Model:
             f"model {existing_model_path} ----------"
         )
         model.energy_system.overwrite_from_existing_model(existing_model_path)
+
         for element in model.elements.values():
             element.overwrite_from_existing_model(existing_model_path)
 
@@ -473,12 +474,12 @@ class Model:
         # remove output path if it exists
         if self.output_path.exists():
             print(
-                f"Output path {self.output_path} aready exists. Deleting "
+                f"Output path {self.output_path} already exists. Deleting "
                 "existing contents."
             )
             shutil.rmtree(self.output_path)
 
-        # write system.json
+        # write system.json and unit files
         self.write_system_file()
 
         # write energy system folder
@@ -497,7 +498,7 @@ class Model:
         to system.json in the output directory.
         """
         # Step 3: Convert the Pydantic model instance to a dictionary
-        system_json = self.config.system.model_dump()
+        system_json = self.config.system.model_dump(exclude_none=True)
 
         system_json["set_conversion_technologies"] = [
             tech.name for tech in self.conversion_technologies.values()

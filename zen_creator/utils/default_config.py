@@ -4,6 +4,8 @@ from typing import Any, Optional
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from zen_creator.utils.units import UnitsConfig
+
 
 class Subscriptable(BaseModel):
     """
@@ -60,31 +62,35 @@ class ElementConfig(Subscriptable):
 class SystemConfig(Subscriptable):
     """
     Config for settings in system.json.
+
+    This includes all configurations located in the `system.json` file.
+    If `None`, the configuration gets skipped when writing the system
+    file. This means that ZEN-garden will simply use its default value.
     """
 
-    set_nodes: Optional[list[str]] = None
-    set_transport_tehnologies_loss_exponential: list[str] = Field(default_factory=list)
-    use_existing_capacities: bool = False
-    allow_investment: bool = True
-    double_capex_transport: bool = False
-    unaggregated_time_steps_per_year: int = 8760
-    conduct_time_series_aggregation: bool = False
-    aggregated_time_steps_per_year: int = 10
-    reference_year: int = 2024
-    total_hours_per_year: int = 8760
-    optimized_years: int = 1
-    interval_between_years: int = 1
-    use_rolling_horizon: bool = False
-    years_in_rolling_horizon: int = 1
-    years_in_decision_horizon: int = 1
-    conduct_scenario_analysis: bool = False
-    run_default_scenario: bool = True
-    clean_sub_scenarios: bool = False
-    storage_periodicity: bool = True
-    multiyear_periodicity: bool = False
-    exclude_parameters_from_TSA: bool = True
-    knowledge_depreciation_rate: float = 0.1
-    storage_charge_discharge_binary: bool = False
+    set_nodes: list[str]
+    set_transport_technologies_loss_exponential: Optional[list[str]] = None
+    use_existing_capacities: Optional[bool] = None
+    allow_investment: Optional[bool] = None
+    double_capex_transport: Optional[bool] = None
+    unaggregated_time_steps_per_year: Optional[int] = None
+    conduct_time_series_aggregation: Optional[bool] = None
+    aggregated_time_steps_per_year: Optional[int] = None
+    reference_year: int
+    total_hours_per_year: Optional[int] = None
+    optimized_years: int
+    interval_between_years: int
+    use_rolling_horizon: Optional[bool] = None
+    years_in_rolling_horizon: Optional[int] = None
+    years_in_decision_horizon: Optional[int] = None
+    conduct_scenario_analysis: Optional[bool] = None
+    run_default_scenario: Optional[bool] = None
+    clean_sub_scenarios: Optional[bool] = None
+    storage_periodicity: Optional[bool] = None
+    multiyear_periodicity: Optional[bool] = None
+    exclude_parameters_from_TSA: Optional[bool] = None
+    knowledge_depreciation_rate: Optional[float] = None
+    storage_charge_discharge_binary: Optional[bool] = None
 
 
 class ENSOEAPIConfig(Subscriptable):
@@ -120,32 +126,35 @@ class Config(Subscriptable):
     output_folder: str = "./models/"
     sectors: SectorConfig = Field(default_factory=SectorConfig)
     elements: ElementConfig = Field(default_factory=ElementConfig)
-    system: SystemConfig = Field(default_factory=SystemConfig)
+    system: SystemConfig
+    units: UnitsConfig = Field(default_factory=UnitsConfig)
     data: DataConfig = Field(default_factory=DataConfig)
 
+    @classmethod
+    def load(cls, path: str | Path) -> "Config":
+        """Load a configuration from a YAML file.
 
-def load_config(path: str | Path) -> Config:
-    """Load a configuration from a YAML file.
+        Args:
+            path (str | Path): Path to the YAML configuration file.
 
-    Args:
-        path (str | Path): Path to the YAML configuration file.
+        Returns:
+            Config: The loaded configuration object.
 
-    Returns:
-        Config: The loaded configuration object.
+        Raises:
+            TypeError: If path is not a string or Path.
+            FileNotFoundError: If the configuration file does not exist.
+        """
+        if not isinstance(path, (str, Path)):
+            raise TypeError(f"Expected path of type `str` or `Path`, got {type(path)}")
 
-    Raises:
-        TypeError: If path is not a string or Path.
-        FileNotFoundError: If the configuration file does not exist.
-    """
-    if not isinstance(path, (str, Path)):
-        raise TypeError(f"Expected path of type `str` or `Path`, got {type(path)}")
+        config_path = Path(path)
 
-    config_path = Path(path)
+        if not config_path.exists():
+            raise FileNotFoundError(
+                f"Could not find the configuration file {config_path}."
+            )
 
-    if not config_path.exists():
-        raise FileNotFoundError(f"Could not find the configuration file {config_path}.")
+        with open(config_path, "r") as f:
+            user_dict = yaml.safe_load(f) or {}
 
-    with open(config_path, "r") as f:
-        user_dict = yaml.safe_load(f) or {}
-
-    return Config.model_validate(user_dict)
+        return cls.model_validate(user_dict)

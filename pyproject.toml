@@ -42,6 +42,10 @@ docs = [
 ]
 
 dev = [
+    "pytest",
+    "coverage",
+    "pytest-xdist",
+    "pytest-cov",
     "black==25.12.0",
     "ruff==0.14.13",
     "mypy==1.19.1",
@@ -51,6 +55,10 @@ dev = [
     "types-docutils",
     "scipy-stubs"
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
 
 [tool.black]
 line-length = 88

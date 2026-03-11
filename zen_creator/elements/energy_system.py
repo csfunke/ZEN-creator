@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -252,7 +253,43 @@ class EnergySystem(Element):
             )
         self._set_edges = value
 
-    # ---------- Methods ----------
+    # ---------- Method Overloads --------
+
+    def write(self) -> None:
+        """Write the energy system folder.
+
+        This method writes all files in the energy system folder
+        of the model. It overrides the standard write method from
+        the element class to also save the unit files.
+        """
+        # save attribute files and attribute data
+        super().write()
+
+        # write unit files
+        self.write_unit_files()
+
+        # write unit definitions
+
+    def write_unit_files(self):
+        """Write the unit definitions to the mode file for the model.
+
+        This method generates the 'base_units.json' and 'unit_definitions.txt'
+        files required in the model.
+        """
+        # Data structure to write to JSON
+        units_config = self.model.config.units
+
+        # Writing to a 'base_units.json' file
+        base_unit_path = self.output_path / "base_units.json"
+        with open(base_unit_path, "w") as json_file:
+            json.dump(units_config.get_base_units(), json_file, indent=4)
+
+        # Writing to a 'base_units.json' file
+        base_unit_path = self.output_path / "unit_definitions.txt"
+        with open(base_unit_path, "w") as file:
+            file.write(units_config.get_unit_definitions())
+
+    # ---------- Custom Methods ----------
 
     def _set_set_nodes(self) -> Attribute:
         attr = NUTSshp(source_path=self.source_path).get_set_nodes(self)
