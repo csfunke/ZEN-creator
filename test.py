@@ -13,7 +13,7 @@ source_path = (
 config_path = Path(os.path.join(source_path, "config.yaml"))
 
 # Create model from scratch --------------------------------------------
-model = Model(config_path)
+model = Model.from_config(config_path)
 
 # Add whole sector to the model -----------------------------
 model.add_sector(sectors.Electricity)

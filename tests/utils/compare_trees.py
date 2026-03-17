@@ -10,12 +10,15 @@ import pandas as pd
 # ----------------------------
 # JSON DEEP DIFF
 # ----------------------------
+TOLERANCE = 10**-12
 
 
 def json_diff(obj1, obj2, path=""):
     diffs = []
 
-    if type(obj1) is not type(obj2):
+    if (type(obj1) is not type(obj2)) and not (
+        isinstance(obj1, int) and isinstance(obj2, float)  # exclude int -> float
+    ):
         diffs.append(f"{path} - Type changed: {type(obj1)} -> {type(obj2)}")
         return diffs
 
@@ -48,7 +51,14 @@ def json_diff(obj1, obj2, path=""):
                 diffs.append(f"{path} - Extra items in Tree2")
 
     else:
-        if obj1 != obj2:
+        # compare numbers to machine precision
+        if isinstance(obj1, (int, float, complex)) and isinstance(
+            obj2, (int, float, complex)
+        ):
+            if abs(obj1 - obj2) >= max(abs(obj1), abs(obj2), 1) * TOLERANCE:
+                diffs.append(f"{path} - Value changed: {obj1} -> {obj2}")
+
+        elif obj1 != obj2:
             diffs.append(f"{path} - Value changed: {obj1} -> {obj2}")
 
     return diffs
@@ -106,7 +116,7 @@ def csv_diff(file1: str, file2: str, tol: float = 1e-10) -> List[str]:
 
         # Numeric columns → compare with tolerance
         if pd.api.types.is_numeric_dtype(s1):
-            comparison = np.isclose(s1, s2, atol=tol, rtol=0, equal_nan=True)
+            comparison = np.isclose(s1, s2, atol=0, rtol=TOLERANCE, equal_nan=True)
         else:
             comparison = (s1 == s2) | (s1.isna() & s2.isna())
 

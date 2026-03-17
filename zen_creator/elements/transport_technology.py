@@ -80,3 +80,19 @@ class TransportTechnology(Technology, ABC):
     def distance(self, value: Attribute) -> None:
         self._validate_attribute(value)
         self._distance = value
+
+
+class GenericTransportTechnology(TransportTechnology):
+
+    name: str = "generic_transport_technology"  # for element registry
+
+    def __init__(self, name: str, model: Model, power_unit: str = "MW"):
+        self.name = name  # overwrite with new name
+        super().__init__(model=model, power_unit=power_unit)
+
+    def _set_lifetime(self) -> Attribute:
+        attr = self.lifetime  # get default value
+        return attr
+
+    def _set_reference_carrier(self) -> Attribute:
+        return Attribute(name="reference_carrier", default_value=[], element=self)

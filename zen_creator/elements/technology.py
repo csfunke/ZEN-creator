@@ -250,7 +250,7 @@ class Technology(Element, ABC):
         self._max_diffusion_rate = value
 
     @property
-    def lifetime(self) -> Attribute | None:
+    def lifetime(self) -> Attribute:
         return self._lifetime
 
     @lifetime.setter

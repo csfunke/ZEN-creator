@@ -5,6 +5,7 @@ from .natural_gas_boiler import NaturalGasBoiler
 from .photovoltaics import Photovoltaics
 
 __all__ = [
+    "GenericConversionTechnology",
     "ElectrodeBoiler",
     "HeatPump",
     "LigniteCoalPlant",

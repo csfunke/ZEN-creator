@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -11,7 +12,7 @@ from zen_creator.elements.element import Element
 from zen_creator.utils.attribute import Attribute
 
 
-class Carrier(Element):
+class Carrier(Element, ABC):
     subpath = "set_carriers"
     name = "carrier"
 
@@ -190,3 +191,12 @@ class Carrier(Element):
     def price_shed_demand(self, value: Attribute) -> None:
         self._validate_attribute(value)
         self._price_shed_demand = value
+
+
+class GenericCarrier(Carrier):
+
+    name: str = "generic_carrier"  # for element registry
+
+    def __init__(self, name: str, model: Model, power_unit: str = "MW"):
+        self.name = name  # overwrite with new name
+        super().__init__(model=model, power_unit=power_unit)

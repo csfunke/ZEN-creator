@@ -12,6 +12,7 @@ from zen_creator.utils.attribute import Attribute
 
 
 class ConversionTechnology(Technology, ABC):
+
     subpath = "set_conversion_technologies"
     name = "conversion_technology"
 
@@ -124,3 +125,29 @@ class ConversionTechnology(Technology, ABC):
             "All subclasses of ConversionTechnology must "
             "implement `_set_conversion_factor()`"
         )
+
+
+class GenericConversionTechnology(ConversionTechnology):
+
+    name: str = "generic_conversion_technology"  # for element registry
+
+    def __init__(self, name: str, model: Model, power_unit: str = "MW"):
+        self.name = name  # overwrite with new name
+        super().__init__(model=model, power_unit=power_unit)
+
+    def _set_lifetime(self) -> Attribute:
+        attr = self.lifetime  # get default value
+        return attr
+
+    def _set_conversion_factor(self) -> Attribute:
+        attr = self.conversion_factor  # get default value
+        return attr
+
+    def _set_reference_carrier(self) -> Attribute:
+        return Attribute(name="reference_carrier", default_value=[], element=self)
+
+    def _set_input_carrier(self) -> Attribute:
+        return Attribute(name="input_carrier", default_value=[], element=self)
+
+    def _set_output_carrier(self) -> Attribute:
+        return Attribute(name="output_carrier", default_value=[], element=self)

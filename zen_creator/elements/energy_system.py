@@ -266,18 +266,19 @@ class EnergySystem(Element):
         super().write()
 
         # write unit files
-        self.write_unit_files()
+        self._write_units()
 
         # write unit definitions
+        self._write_parameters_interpolation_off()
 
-    def write_unit_files(self):
+    def _write_units(self):
         """Write the unit definitions to the mode file for the model.
 
         This method generates the 'base_units.json' and 'unit_definitions.txt'
         files required in the model.
         """
         # Data structure to write to JSON
-        units_config = self.model.config.units
+        units_config = self.model.config.energy_system.units
 
         # Writing to a 'base_units.json' file
         base_unit_path = self.output_path / "base_units.json"
@@ -286,8 +287,25 @@ class EnergySystem(Element):
 
         # Writing to a 'base_units.json' file
         base_unit_path = self.output_path / "unit_definitions.txt"
-        with open(base_unit_path, "w") as file:
+        with open(base_unit_path, "w", encoding="utf-8") as file:
             file.write(units_config.get_unit_definitions())
+
+    def _write_parameters_interpolation_off(self):
+        """Write the parameters_interpolation_off if it exists.
+
+        This method generates the 'parameters_interpolation_off.json'
+        file in the 'energy_system' folder.
+        """
+        # Data structure to write to JSON
+        param_interp_config = (
+            self.model.config.energy_system.parameters_interpolation_off
+        )
+
+        # Writing to a 'parameters_interpolation_off.json' file if config not empty
+        if param_interp_config.parameter_name:
+            file_path_interp = self.output_path / "parameters_interpolation_off.json"
+            with open(file_path_interp, "w") as json_file:
+                json.dump(param_interp_config.model_dump(), json_file, indent=4)
 
     # ---------- Custom Methods ----------
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC
 from typing import TYPE_CHECKING, ClassVar, Type
 
 if TYPE_CHECKING:
@@ -10,9 +11,10 @@ import json
 from pathlib import Path
 
 from zen_creator.utils.attribute import Attribute
+from zen_creator.utils.registry import Registry
 
 
-class Element:
+class Element(Registry["Element"], ABC):
     """Base class for all elements in the ZEN model.
 
     This class provides the foundation for carriers, technologies, and other
@@ -43,23 +45,6 @@ class Element:
         self.model: Model = model
         self.config: Config = model.config
         self.power_unit: str = power_unit
-        self.source_path: Path = model.source_path
-
-    def __init_subclass__(cls, **kwargs):
-        """Initialize subclass and register it in the element registry.
-
-        Args:
-            **kwargs: Additional keyword arguments.
-
-        Raises:
-            Exception: If the subclass does not define a 'name' attribute.
-        """
-        super().__init_subclass__(**kwargs)
-        if not hasattr(cls, "name"):
-            raise Exception(
-                f"Subclass {cls.__name__} should define a class variable " "" "'name'."
-            )
-        Element._element_registry[cls.name] = cls
 
     # ----------- properties ------------------------------------------
 
@@ -104,6 +89,16 @@ class Element:
         output_path.mkdir(parents=True, exist_ok=True)
 
         return output_path
+
+    @property
+    def source_path(self) -> Path:
+        """Get the source path of the model where the raw data is located.
+
+        Returns:
+            Path: The source path to the raw data.
+        """
+
+        return self.model.source_path
 
     # ------- methods for building -------------------------------------
 

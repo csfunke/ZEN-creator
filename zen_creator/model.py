@@ -1,12 +1,17 @@
 import json
 import shutil
 from pathlib import Path
-from typing import Iterable, Type
+from typing import Iterable, Optional, Type
 
 from zen_creator.elements import (
     Carrier,
     ConversionTechnology,
     EnergySystem,
+    GenericCarrier,
+    GenericConversionTechnology,
+    GenericRetrofittingTechnology,
+    GenericStorageTechnology,
+    GenericTransportTechnology,
     RetrofittingTechnology,
     StorageTechnology,
     Technology,
@@ -35,7 +40,21 @@ class Model:
             technologies) present in the model.
     """
 
-    def __init__(self, config: Config | str | Path):
+    def __init__(self) -> None:
+        """Initialize a new Model instance."""
+
+        # internal variables for properties
+        self.config: Config = Config()
+        self.name: str = self.config.name
+        self._output_folder: Optional[Path] = None
+        self._source_path: Optional[Path] = None
+        self._energy_system: Optional[EnergySystem] = None
+
+        # initialize other attributes
+        self.elements: dict[str, Element] = {}
+
+    @classmethod
+    def from_config(cls, config: Config | str | Path):
         """Initialize a new Model instance.
 
         Args:
@@ -46,35 +65,64 @@ class Model:
             TypeError: If config is not a valid type.
         """
         # set attributes from input arguments
-        self.config: Config = (
-            config if isinstance(config, Config) else Config.load(config)
+        model = cls()
+
+        model.config = (
+            config if isinstance(config, Config) else Config.load_from_yaml(config)
         )
-        self.name: str = self.config.name
-        self.output_folder: Path = Path(self.config.output_folder)
-        self.source_path: Path = Path(self.config.source_path)
+        model.name = model.config.name
+        model.output_folder = model.config.output_folder
+        model.source_path = model.config.source_path
 
         # initialize other attributes
-        self.energy_system: EnergySystem = EnergySystem(self)
-        self.elements: dict[str, Element] = dict()
+        model.energy_system = EnergySystem(model)
+        model.elements = dict()
 
-        for sector in self.config.sectors.include:
-            self.add_sector_by_name(sector)
+        insert = model.config.elements.insert
+        exclude = model.config.elements.exclude
 
-        for element in self.config.elements.include:
-            self.add_element_by_name(element)
+        # Add sectors (using a loop directly)
+        for sector in insert.set_sectors:
+            model.add_sector_by_name(sector)
 
-        for element in self.config.elements.exclude:
-            self.remove_element_by_name(element)
+        # Add technologies by iterating over the technology types
+        element_map = {
+            "set_conversion_technologies": "conversion_technology",
+            "set_storage_technologies": "storage_technology",
+            "set_transport_technologies": "transport_technology",
+            "set_retrofitting_technologies": "retrofitting_technology",
+            "set_carriers": "carrier",
+        }
+        for element_set, element_type in element_map.items():
+            element_list = getattr(insert, element_set)
+            for element in element_list:
+                model.add_element_by_name(element, element_type)
+
+        # Remove sectors that should be excluded
+        # ToDo:
+
+        # Remove technologies that should be excluded
+        for element_set in element_map.keys():
+            element_list = getattr(exclude, element_set)
+            for element in element_list:
+                model.remove_element_by_name(element)
+
+        return model
 
     @classmethod
     def from_existing(
-        cls, existing_model_path: Path | str, config: Config | str | Path
+        cls, existing_model_path: Path | str, config: Config | str | Path | None = None
     ):
         """Construct a model from an ZEN-garden input folder.
 
         This method loads the data of an existing ZEN-garden model
         into the data structure. The existing model must be in the
         proper data format for ZEN-garden.
+
+        If not config is specified, a configuration file is created from
+        the default configurations. The system configurations, unit
+        unit configurations, model name, and output folder are then taken
+        directly from the
 
         This function performs the following steps:
             1. Create a Model object using the configuration file. This
@@ -86,9 +134,10 @@ class Model:
 
         Args:
             existing_model_path (Path | str): Path to the existing model.
-            config (Config | str | Path): Configuration file for the
+            config (Config | str | Pat | None): Configuration file for the
                 new model.Can be a Config object, or a path to a
-                config file.
+                config file. If a configuration file is created from the default
+                configurations. The name
 
         Returns:
             Model: A new Model instance initialized from the existing model.
@@ -97,11 +146,17 @@ class Model:
             ValueError: If the existing model path does not exist.
         """
         existing_model_path = Path(existing_model_path)
+
         if not existing_model_path.exists():
             raise ValueError(f"Input path '{existing_model_path}' does not exist.")
 
-        # construct model
-        model = cls(config=config)
+        # handle config
+        if config is None:
+            config = Config.load_from_existing_model(existing_model_path)
+
+        # construct model object
+        # no data is loaded yet, only default values form zen-creator are used.
+        model = cls.from_config(config)
 
         # overwrite default values with values from existing model
         print(
@@ -202,6 +257,34 @@ class Model:
         }
 
     @property
+    def energy_system(self) -> EnergySystem:
+        """Return EnergySystem class of the model.
+
+        Returns:
+            EnergySystem: Object containing all energy system configurations
+                of the model.
+        Raises:
+            ValueError: If no energy system has been defined.
+        """
+        if not self._energy_system:
+            raise ValueError("The energy system has not been defined yet.")
+        return self._energy_system
+
+    @energy_system.setter
+    def energy_system(self, value: EnergySystem | None) -> None:
+        """Set the energy_system and validate the input.
+
+        Args:
+            value (EnergySystem | None): The path energy_system.
+
+        Raises:
+            TypeError: If value is not a EnergySystem instance or None.
+        """
+        if not isinstance(value, EnergySystem) and value is not None:
+            raise ValueError("The energy system has not been defined yet")
+        self._energy_system = value
+
+    @property
     def output_path(self) -> Path:
         """
         Output path where model will be saved.
@@ -213,6 +296,9 @@ class Model:
             Creates the folder corresponding to the output path if it
             does not exist.
         """
+        if self.output_folder is None:
+            raise ValueError("Output folder has not been set yet.")
+
         output_path = self.output_folder / self.name
 
         # ensure directory exists
@@ -225,10 +311,12 @@ class Model:
         """
         Output folder where model will be saved.
         """
+        if self._out_path is None:
+            raise ValueError("The output folder has not been set yet.")
         return self._out_path
 
     @output_folder.setter
-    def output_folder(self, value: Path):
+    def output_folder(self, value: Path | str | None):
         """Set the output folder and validate the input.
 
         Args:
@@ -237,22 +325,27 @@ class Model:
         Raises:
             TypeError: If value is not a Path instance.
         """
-        if not isinstance(value, Path):
+        if value is None:
+            self._out_path = value
+            return
+        if not isinstance(value, (Path, str)):
             raise TypeError(
-                f"Expected an instance of 'Path', got"
+                f"Expected an instance of 'Path', 'str', or 'None', got"
                 f"'{type(value).__name__}' instead."
             )
-        self._out_path = value
+        self._out_path = Path(value)
 
     @property
     def source_path(self) -> Path:
         """
         Source path where model data is read from.
         """
+        if self._source_path is None:
+            raise ValueError("The source path has not been set yet.")
         return self._source_path
 
     @source_path.setter
-    def source_path(self, value: Path):
+    def source_path(self, value: Path | str | None):
         """Set the source path and validate the input.
 
         Args:
@@ -262,18 +355,31 @@ class Model:
             TypeError: If value is not a Path instance.
             ValueError: If the path does not exist.
         """
-        if not isinstance(value, Path):
+        # handle None
+        if value is None:
+            self._source_path = value
+            return
+
+        # check type str or Path
+        if not isinstance(value, (Path, str)):
             raise TypeError(
-                f"Expected an instance of 'Path' or `None`, got"
+                f"Expected an instance of 'Path', 'str' or 'None', got"
                 f"'{type(value).__name__}' instead."
             )
-        if not value.exists():
+
+        # check whether file exists
+        source_path = Path(value)
+        if not source_path.exists():
             raise ValueError(f"Source path '{value}' does not exist.")
-        self._source_path = value
+
+        # save
+        self._source_path = source_path
 
     # -------- Adding / Removing Elements  -----------------------------------------
 
-    def add_element_by_name(self, element: str) -> None:
+    def add_element_by_name(
+        self, element_name: str, generic: None | str = None
+    ) -> None:
         """Add an element to the model by its name.
 
         Args:
@@ -284,22 +390,53 @@ class Model:
             ValueError: If the element is not registered. Elements get
                 registered when their class definitions are imported.
         """
-        if not isinstance(element, str):
+        generic_map: dict[
+            str,
+            Type[GenericConversionTechnology]
+            | Type[GenericStorageTechnology]
+            | Type[GenericTransportTechnology]
+            | Type[GenericRetrofittingTechnology]
+            | Type[GenericCarrier],
+        ] = {
+            "conversion_technology": GenericConversionTechnology,
+            "storage_technology": GenericStorageTechnology,
+            "transport_technology": GenericTransportTechnology,
+            "retrofitting_technology": GenericRetrofittingTechnology,
+            "carrier": GenericCarrier,
+        }
+
+        # Validate inputs
+        if not isinstance(element_name, str):
             raise TypeError(
                 f"Expected a subclass of 'str', "
-                f"got '{type(element).__name__}' instead."
+                f"got '{type(element_name).__name__}' instead."
             )
-
-        element_cls = Element._element_registry.get(element)
-
-        if element_cls is None:
+        if generic is not None and generic not in generic_map.keys():
             raise ValueError(
-                f"Element '{element}' is not registered. Please ensure "
-                "that the class corresponding to the element has been "
-                "imported."
+                f"Expected 'element_type' to be one of None or {generic_map.keys()}."
             )
 
-        self.add_element(element_cls)
+        if element_name in self.elements:
+            print(f"Element '{element_name}' already exists in the dictionary.")
+            return
+
+        # Get type class and generic class
+        if (subtype_cls := Element.get_by_name(element_name)) is not None:
+            # initialize element via defined subclass if it exists
+            element = subtype_cls(model=self)
+        elif generic is not None:
+            # initialize element via generic type
+            generic_cls = generic_map[generic]
+            element = generic_cls(model=self, name=element_name)
+        else:
+            raise ValueError(
+                f"No class definition found for element {element_name}."
+                "Please verify that this class definition exists and has"
+                "been imported."
+            )
+
+        # add to element list
+        self.elements[element_name] = element
 
         return
 
@@ -361,7 +498,8 @@ class Model:
         if len(matches) > 1:
             raise ValueError(
                 f"Multiple elements of type '{element_cls.__name__}' found in "
-                "the model."
+                "the model. Use 'Model.remove_element_by_name()' to specify which"
+                "specific element to remove."
             )
 
         name = matches[0]
@@ -479,7 +617,7 @@ class Model:
             )
             shutil.rmtree(self.output_path)
 
-        # write system.json and unit files
+        # write system.json
         self.write_system_file()
 
         # write energy system folder
@@ -497,18 +635,28 @@ class Model:
         This method generates the system configuration dictionary and writes it
         to system.json in the output directory.
         """
-        # Step 3: Convert the Pydantic model instance to a dictionary
+        # convert the Pydantic model instance to a dictionary
         system_json = self.config.system.model_dump(exclude_none=True)
 
-        system_json["set_conversion_technologies"] = [
-            tech.name for tech in self.conversion_technologies.values()
-        ]
-        system_json["set_transport_technologies"] = [
-            tech.name for tech in self.transport_technologies.values()
-        ]
-        system_json["set_storage_technologies"] = [
-            tech.name for tech in self.storage_technologies.values()
-        ]
+        # set technology lists
+        technologies = {
+            "set_conversion_technologies": [
+                tech.name
+                for tech in self.conversion_technologies.values()
+                if tech not in self.retrofitting_technologies.values()
+            ],
+            "set_storage_technologies": [
+                tech.name for tech in self.storage_technologies.values()
+            ],
+            "set_transport_technologies": [
+                tech.name for tech in self.transport_technologies.values()
+            ],
+            "set_retrofitting_technologies": [
+                tech.name for tech in self.retrofitting_technologies.values()
+            ],
+        }
+
+        system_json.update({k: v for k, v in technologies.items() if v})
 
         # Step 4: Write the dictionary to a JSON file
         with open(self.output_path / "system.json", "w") as f:
