@@ -24,6 +24,12 @@ Documentation
    files/developer_guide/workflow
    files/developer_guide/class_diagram
    files/developer_guide/add_new_params
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API Reference
+
+   files/api/zen_creator
    
 .. toctree::
    :maxdepth: 1
