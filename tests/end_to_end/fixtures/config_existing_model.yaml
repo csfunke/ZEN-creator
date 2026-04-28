@@ -8,7 +8,6 @@ system:
   set_nodes:
     - CH
     - DE
-
   reference_year: 2023
   unaggregated_time_steps_per_year: 96
   aggregated_time_steps_per_year: 96
@@ -46,9 +45,8 @@ elements:
 
 # settings for individual data sources
 data:
-  datasets:
-    ensoe_api:
-      api_key: ""
+  datasets: {}
+  dataset_collections: {}
 
 # settings that go into the energy_system folder
 energy_system:

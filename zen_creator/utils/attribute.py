@@ -82,8 +82,8 @@ class Attribute:
         self,
         name: str,
         element: Element,
-        unit: str | None = None,
         default_value: DefaultValue = None,
+        unit: str | None = None,
         base_technology: str | None = None,
         df: DataFrame | None = None,
         year_specific_dfs: dict[int, DataFrame] | None = None,
@@ -95,9 +95,12 @@ class Attribute:
         Args:
             name: The name of the attribute.
             element: The element this attribute belongs to.
-            unit: The unit of measurement for this attribute (optional).
             default_value: Default value for the attribute (optional).
+            unit: The unit of measurement for this attribute (optional).
+            base_technology: Base technology for retrofit_flow_coupling_factor
+                (optional).
             df: Time-series data as a pandas DataFrame or Series (optional).
+            year_specific_dfs: Year-specific data frames (optional).
             yearly_variations_df: Yearly variation factors (optional).
             sources: Ordered source information entries for this attribute (optional).
         """
